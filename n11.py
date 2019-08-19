@@ -74,7 +74,7 @@ def getProductsInPage(resp, tree):
     return productsOfPage
 
 
-def crawlOverPagination(startUrl):
+def crawlOverPagination(startUrl = 'https://www.n11.com/telefon-ve-aksesuarlari/cep-telefonu'):
     url = startUrl
     allProducts = []
     while True:
