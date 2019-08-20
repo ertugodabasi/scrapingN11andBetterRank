@@ -1,27 +1,51 @@
-SELECT
-    CASE
-    WHEN POSITION('badge badgeSuccess' in iq3."BranchBadges" ) >0
-        THEN 1
-        ELSE 0
-    END AS SuccessFullBranch,
-    CASE
-    WHEN POSITION('badge badgeFast' in iq3."BranchBadges" ) >0
-        THEN 1
-        ELSE 0
-    END AS FastBranch,
-       iq3."AvgRating",iq3."ReviewCount",* FROM
-(
-SELECT ROUND(CAST(iq2.BayesianRating AS NUMERIC),2) "RoundedBayesianRating",*
+-------------------------------------------------
+-- Ranks with Bayesian Average
+-------------------------------------------------
+SELECT "Name",
+       ROW_NUMBER() over (ORDER BY "BayesianRating" DESC ) as "newProductPosition",
+       "ProductPosition",
+       "BayesianRating",
+       "ReviewCount",
+       "AvgRating",
+       "Price",
+       "Url"
 FROM (
-         SELECT ((m-std) * (c) + iq1."ReviewCount" * iq1."AvgRating") / (iq1.c + iq1."ReviewCount") BayesianRating
+         SELECT (m * c + "ReviewCount" * "AvgRating") /
+                (c + "ReviewCount") as "BayesianRating"
               , *
          FROM (
-                  SELECT AVG("AvgRating") OVER (PARTITION BY 1)   m,
-                         AVG("ReviewCount") OVER (PARTITION BY 1) c,
-                         STDDEV_SAMP("AvgRating") OVER (PARTITION BY 1) std,
+                  SELECT AVG("AvgRating") OVER ()   as m,
+                         AVG("ReviewCount") OVER () as c,
                          *
 
                   FROM public.n11 as n
                   WHERE n."AvgRating" notnull
-              ) iq1) iq2 )iq3
-order by iq3."RoundedBayesianRating" DESC,iq3."BranchPoint" DESC ,iq3."Price" ;
+              ) iq1) iq2
+
+
+-------------------------------------------------
+-- Ranks with Rounded Bayesian Averages and Price
+-------------------------------------------------
+SELECT "Name",
+       ROW_NUMBER() over (ORDER BY "RoundedBayesianRating" DESC, "Price" ASC ) as "newProductPosition",
+       "ProductPosition",
+       "RoundedBayesianRating",
+       "Price",
+       "BayesianRating",
+       "ReviewCount",
+       "AvgRating",
+       "Url"
+FROM (
+         SELECT ROUND(CAST("BayesianRating" AS NUMERIC), 2) "RoundedBayesianRating", *
+         FROM (
+                  SELECT (m * c + "ReviewCount" * "AvgRating") /
+                         (c + "ReviewCount") as "BayesianRating"
+                       , *
+                  FROM (
+                           SELECT AVG("AvgRating") OVER ()   as m,
+                                  AVG("ReviewCount") OVER () as c,
+                                  *
+
+                           FROM public.n11 as n
+                           WHERE n."AvgRating" notnull
+                       ) iq1) iq2) iq3
